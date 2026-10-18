@@ -20,3 +20,6 @@ header{inset:2% auto auto 2%;width:18%}.title{width:100%;padding:5% 8%}.title sp
 
 /* Keep decorative rivets inside the compact expression panel. */
 .top-bar:before,.top-bar:after{top:50%;transform:translateY(-50%);width:6px;height:6px;box-shadow:none}
+
+/* Keep announcements available to assistive technology without a bottom strip. */
+#status{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;background:none}

@@ -48,7 +48,9 @@ function makeBattle(a,b,random=Math.random,operation='add'){
  }
  battle.finalExit=finalExit;battle.lastFireExit=finalExit;battle.end=Math.max(finalExit,battle.lastCancel?battle.lastCancel+.95:0);
  if(!units.length){battle.costumeStart=CHARGE_START;battle.release=CHARGE_START;battle.end=CHARGE_START;}
- battle.mapAt=mapTransitionTime(battle);
+ battle.drainAt=mapTransitionTime(battle);
+ battle.drainIds=battle.drainAt<battle.end?battle.units.filter(u=>{const p=pose(battle,u,battle.drainAt);return p&&p.x>=-SPRITE_SIZE&&p.x<=W+SPRITE_SIZE;}).map(u=>u.id):null;
+ battle.mapAt=battle.drainIds?Math.max(battle.drainAt,...battle.units.filter(u=>battle.drainIds.includes(u.id)).map(u=>u.exit||u.arrival)):battle.end;
  return battle;
 }
 function pose(b,u,t){
