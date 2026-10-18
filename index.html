@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Water and fire shapes make signed integer addition and subtraction visible."><title>Integer Addition and Subtraction</title><link rel="stylesheet" href="style.css"></head>
+<body><main class="game" aria-label="Water and fire signed integer addition and subtraction">
+<img class="landscape" src="assets/battle-painted.webp" alt="Painted mountain valley with waterfalls and a narrow central ravine">
+<canvas id="scene" width="1774" height="887" aria-label="Water and fire shapes cancel in zero pairs"></canvas>
+
+<div id="emblem" class="emblem" hidden><div class="stone"><canvas id="resultShield" width="768" height="1024" aria-hidden="true"></canvas><span id="result"></span></div></div>
+<div class="top-bar parchment">
+<div id="expression" class="equation" aria-live="polite">(3) + (−4)</div>
+<button id="run" class="run" type="button"><span aria-hidden="true">▶</span> Run</button>
+</div>
+<div class="controls parchment">
+<fieldset id="leftControl"><legend>First integer</legend><div class="stepper"><button type="button" data-side="left" data-delta="-1" aria-label="Decrease left integer">−</button><input id="left" type="text" inputmode="numeric" value="+3" maxlength="3" aria-label="First integer, from negative 99 to positive 99" autocomplete="off"><button type="button" data-side="left" data-delta="1" aria-label="Increase left integer">+</button></div></fieldset>
+<label class="operation-label" for="operation">Operation <select id="operation"><option value="add">Add (+)</option><option value="subtract">Subtract (−)</option></select></label>
+<fieldset id="rightControl"><legend>Second integer</legend><div class="stepper"><button type="button" data-side="right" data-delta="-1" aria-label="Decrease right integer">−</button><input id="right" type="text" inputmode="numeric" value="-4" maxlength="3" aria-label="Second integer, from negative 99 to positive 99" autocomplete="off"><button type="button" data-side="right" data-delta="1" aria-label="Increase right integer">+</button></div></fieldset>
+</div><p id="status" role="status" aria-live="polite">Loading the characters…</p>
+</main><script src="battle.js"></script><script src="map.js"></script><script src="map-render.js"></script><script src="game.js"></script></body></html>
