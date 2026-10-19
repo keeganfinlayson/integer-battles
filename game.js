@@ -9,7 +9,7 @@ const integerText=n=>Number.isFinite(n)?String(n).replace('-','−'):'?';
 const equationText=(a,b,op,answer)=>'('+integerText(a)+') '+(op==='subtract'?'−':'+')+' ('+integerText(b)+')'+(answer===undefined?'':' = '+integerText(answer));
 function updateExpression(answer){expression.textContent=equationText(value(left),value(right),operation.value,answer);}
 let mapBridge,crossingArt;
-let sprites,costumes,reveals,turns,shieldWater,shieldFire,ready=false,battle=null,start=0,running=false,raf=0;
+let sprites,wizard,turns,shieldWater,shieldFire,ready=false,battle=null,start=0,running=false,raf=0;
 const image=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('Could not load '+src));img.src=src;});
 function value(input){return /^[+-]?\d{1,2}$/.test(input.value.trim())?Number(input.value):NaN;}
 const signed=n=>n>0?'+'+n:String(n);
@@ -46,9 +46,7 @@ function warrior(u,p){
  if(!p||p.x< -190||p.x>1964)return;
  if(p.turnProgress!==null&&p.turnProgress!==undefined){smoothSprite(turns,'turn',p.sign>0?0:1,p.turnProgress*5,p.x,p.y,p.turnDirection);return;}
  if(p.costumeFrame!==null&&p.costumeFrame!==undefined){
-  const incoming=u.side==='left'?1:-1,reverse=!battle.opposing&&incoming!==u.effectiveSign;
-  // The drawn pivot supplies the change of view; no cosine squash or sudden mirror.
-  smoothSprite(reverse?costumes:reveals,reverse?'change':'reveal',p.conversionRow,p.conversionProgress*5,p.x,p.y,incoming);return;
+  enchantedUnit(u,p);return;
  }
  if(p.stanceFrame!==null&&p.stanceFrame!==undefined){
   const opening=running?Math.max(0,(performance.now()-start)/1000):0;
@@ -56,6 +54,54 @@ function warrior(u,p){
   smoothSprite(stances,'ready',p.sign>0?0:1,phase,p.x,p.y,p.direction,p.turnScale||1);return;
  }
  smoothSprite(sprites,'run',p.sign>0?0:1,p.runPhase,p.x,p.y,p.direction,p.turnScale||1,0,true);
+}
+const clamp01=x=>Math.max(0,Math.min(1,x));
+const ease=x=>{x=clamp01(x);return x*x*(3-2*x);};
+// The minus cloud settles first; only then does the second operand change sign.
+function spellProgress(p){
+ return ease((p.conversionProgress-.52)/.20);
+}
+function enchantedUnit(u,p){
+ const q=p.conversionProgress,blend=spellProgress(p),incoming=-1;
+ const reverse=!battle.opposing&&incoming!==u.effectiveSign;
+ if(reverse&&q>=.76){
+  smoothSprite(turns,'turn',u.effectiveSign>0?0:1,ease((q-.76)/.24)*5,p.x,p.y,incoming);return;
+ }
+ spriteCell(stances,'ready',u.sign>0?0:1,0,p.x,p.y,incoming,1,0,180,1-blend);
+ spriteCell(stances,'ready',u.effectiveSign>0?0:1,0,p.x,p.y,incoming,1,0,180,blend);
+ // A brief ring marks the change of sign without concealing the elemental shape.
+ const glow=Math.sin(blend*Math.PI);
+ if(glow>.01){ctx.save();ctx.globalAlpha=glow*.8;ctx.strokeStyle='#f8e6ff';ctx.lineWidth=4;ctx.shadowColor='#c79aff';ctx.shadowBlur=12;ctx.beginPath();ctx.ellipse(p.x,p.y-75,65+blend*12,82,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
+}
+function wizardSpell(t){
+ if(!battle.conversion)return;
+ const q=(t-battle.costumeStart)/model.COSTUME_TIME;
+ if(q<-.35||q>1.32)return;
+ const alpha=ease((q+.35)/.24)*(1-ease((q-1)/.32));
+ const x=model.CENTER-20,y=480,size=200;
+ const row=battle.a<0?1:0,cellSize=wizard.width/3,foot=row===0?.965:.91;
+ const phase=q<0?ease((q+.35)/.35):1+ease(q/.22);
+ const a=Math.floor(phase),b=Math.min(2,a+1),fraction=phase-a;
+ ctx.save();ctx.globalAlpha=alpha;
+ for(const [cell,weight]of [[a,1-fraction],[b,fraction]]){if(!weight)continue;ctx.globalAlpha=alpha*weight;ctx.drawImage(wizard,cell*cellSize,row*cellSize,cellSize,cellSize,x-size/2,y-size*foot,size,size);}
+ ctx.restore();
+ if(q<0||q>1)return;
+ const targets=battle.units.filter(u=>u.side==='right').map(u=>model.pose(battle,u,t)).filter(p=>p&&p.x>=-90&&p.x<=model.W+90);
+ if(!targets.length)return;
+ const low=Math.max(model.CENTER+95,Math.min(...targets.map(p=>p.x))-100),high=Math.min(model.W+70,Math.max(...targets.map(p=>p.x))+100);
+ const cx=(low+high)/2,width=Math.max(235,high-low),settle=ease((q-.12)/.40);
+ const cy=265+110*settle,strength=alpha*ease(q/.16)*(1-ease((q-.74)/.26));
+ ctx.save();ctx.globalAlpha=strength;
+ // One softly scalloped cloud covers the visible second group without adding units.
+ const gradient=ctx.createLinearGradient(0,cy-80,0,cy+70);gradient.addColorStop(0,'#fffaff');gradient.addColorStop(.55,'#e2d0f3');gradient.addColorStop(1,'#bca0d4');
+ ctx.fillStyle=gradient;ctx.shadowColor='#9e6ac2';ctx.shadowBlur=13;
+ ctx.beginPath();const lobes=Math.max(3,Math.ceil(width/95));
+ for(let i=0;i<lobes;i++){const px=cx-width/2+width*(i+.5)/lobes,py=cy+Math.sin(i*2.3)*11;ctx.moveTo(px+75,py);ctx.ellipse(px,py,75,48+(i%2)*12,0,0,Math.PI*2);}
+ ctx.fill();ctx.shadowBlur=0;
+ // The sign stays inside the cloud as it descends and triggers the color change.
+ ctx.font='bold 92px Georgia';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineWidth=5;ctx.strokeStyle='#fff8ff';ctx.strokeText('−',cx,cy-3);ctx.fillStyle='#56316d';ctx.fillText('−',cx,cy-3);
+ if(q<.3){ctx.strokeStyle='#dfbcff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x+88,y-66);ctx.quadraticCurveTo(cx,220,cx,cy-35);ctx.stroke();}
+ ctx.restore();
 }
 function dissolve(c,t){
  const age=t-c.time;if(age<0||age>=.14)return;
@@ -96,11 +142,11 @@ function paintShield(value){
 function finish(){running=false;emblem.className='emblem '+(battle.result<0?'fire':battle.result>0?'water':'neutral');result.textContent=signed(battle.result);paintShield(battle.result);emblem.hidden=false;left.disabled=right.disabled=operation.disabled=false;document.querySelectorAll('[data-delta]').forEach(b=>b.disabled=false);sync();updateExpression(battle.result);status.textContent=expression.textContent;window.drawIntegerMap(ctx,journey,journey.end,battle.result<0?mapArtNegative:mapArtPositive,mapBridge);}
 function frame(now){
  if(journey){const t=(now-mapStart)/1000;window.drawIntegerMap(ctx,journey,t,battle.result<0?mapArtNegative:mapArtPositive,mapBridge);if(window.IntegerMap.sample(journey,t).done){finish();return;}raf=requestAnimationFrame(frame);return;}
- const t=(now-start)/1000;if(battle.stage){const message=t<model.CHARGE_START?'The characters get ready to run…':t<battle.costumeStart?'The front characters approach zero…':t<battle.release?(battle.conversion?(battle.b<0?'Fire lifts its hood and turns into water…':'Water lifts its hood and turns into fire…'):'The groups turn to join…'):battle.opposing?'Opposite units cancel in zero pairs…':battle.result<0?'Both groups run left together…':'Both groups run right together…';if(status.textContent!==message)status.textContent=message;}scenery();battle.units.slice().sort((a,b)=>a.lane-b.lane).forEach(u=>{const p=model.pose(battle,u,t);if(p&&(!battle.drainIds||t<battle.drainAt||battle.drainIds.includes(u.id)))warrior(u,p);});battle.collisions.forEach(c=>{dissolve(c,t);steam(c,t);});
+ const t=(now-start)/1000;if(battle.stage){const message=t<model.CHARGE_START?'The characters get ready to run…':t<battle.costumeStart?'The front characters approach zero…':t<battle.release?(battle.conversion?(battle.b<0?'The wizard casts minus: fire becomes water…':'The wizard casts minus: water becomes fire…'):'The groups turn to join…'):battle.opposing?'Opposite units cancel in zero pairs…':battle.result<0?'Both groups run left together…':'Both groups run right together…';if(status.textContent!==message)status.textContent=message;}scenery();battle.units.slice().sort((a,b)=>a.lane-b.lane).forEach(u=>{const p=model.pose(battle,u,t);if(p&&(!battle.drainIds||t<battle.drainAt||battle.drainIds.includes(u.id)))warrior(u,p);});wizardSpell(t);battle.collisions.forEach(c=>{dissolve(c,t);steam(c,t);});
  if(t>=battle.mapAt){journey=window.IntegerMap.makeJourney(battle.result);mapStart=now;game.classList.add('map-scene');status.textContent=battle.result===0?'All units canceled. Zero’s Crossing remains at 0.':'The '+Math.abs(battle.result)+' remaining units move '+(battle.result>0?'to the right.':'to the left.');window.drawIntegerMap(ctx,journey,0,battle.result<0?mapArtNegative:mapArtPositive,mapBridge);}
  raf=requestAnimationFrame(frame);
 }
 run.addEventListener('click',()=>{const a=value(left),b=value(right);if(!ready||running||!model.valid(a,b,operation.value))return;cancelAnimationFrame(raf);battle=model.makeBattle(a,b,Math.random,operation.value);emblem.hidden=true;journey=null;updateExpression();game.classList.remove('map-scene');running=true;left.disabled=right.disabled=operation.disabled=true;document.querySelectorAll('[data-delta]').forEach(b=>b.disabled=true);status.textContent='The characters get ready, then run toward zero…';sync();start=performance.now();raf=requestAnimationFrame(frame);});
-Promise.all([image('assets/symbolic-run-v3.webp'),image('assets/battle-painted.webp'),image('assets/shield-water.png'),image('assets/shield-fire.png'),image('assets/symbolic-change-v2.webp'),image('assets/map-positive-v3.webp'),image('assets/map-negative-v4.webp'),image('assets/symbolic-ready.webp'),image('assets/symbolic-turn.webp'),image('assets/map-bridge.webp'),image('assets/symbolic-reveal.webp'),image('assets/map-crossing.webp')]).then(images=>{[sprites,,shieldWater,shieldFire,costumes,mapArtPositive,mapArtNegative,stances,turns,mapBridge,reveals,crossingArt]=images;window.IntegerMapWorld={positive:mapArtPositive,negative:mapArtNegative,crossing:crossingArt,bridge:mapBridge};ready=true;renderIdle();sync();}).catch(error=>{status.textContent=error.message+' — keep the assets folder beside index.html.';run.disabled=true;});
+Promise.all([image('assets/symbolic-run-v3.webp'),image('assets/battle-painted.webp'),image('assets/shield-water.png'),image('assets/shield-fire.png'),image('assets/wizard-cast.webp'),image('assets/map-positive-v3.webp'),image('assets/map-negative-v4.webp'),image('assets/symbolic-ready.webp'),image('assets/symbolic-turn.webp'),image('assets/map-bridge.webp'),image('assets/map-crossing.webp')]).then(images=>{[sprites,,shieldWater,shieldFire,wizard,mapArtPositive,mapArtNegative,stances,turns,mapBridge,crossingArt]=images;window.IntegerMapWorld={positive:mapArtPositive,negative:mapArtNegative,crossing:crossingArt,bridge:mapBridge};ready=true;renderIdle();sync();}).catch(error=>{status.textContent=error.message+' — keep the assets folder beside index.html.';run.disabled=true;});
 sync();
 })();
