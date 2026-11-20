@@ -1,6 +1,6 @@
 /* Pure timeline: signed units keep their identities through conversion and pairing. */
 (function(root){'use strict';
-const W=1774,CENTER=W/2,SPEED=405,HALF_CONTACT=13,CANCEL_GAP=92,SPRITE_SIZE=180,RUN_FRAMES=8,SCREEN_CAPACITY=16,COSTUME_TIME=1.12,TURN_TIME=.48,STANCE_TIME=.55,CHARGE_START=.80;
+const W=1774,CENTER=W/2,SPEED=405,HALF_CONTACT=13,CANCEL_GAP=92,SPRITE_SIZE=180,RUN_FRAMES=8,SCREEN_CAPACITY=16,COSTUME_TIME=2.6,TURN_TIME=.48,STANCE_TIME=.55,CHARGE_START=.80;
 function valid(a,b,operation='add'){return ['add','subtract'].includes(operation)&&Number.isInteger(a)&&Number.isInteger(b)&&Math.abs(a)<=99&&Math.abs(b)<=99;}
 function openingStance(t){return t<STANCE_TIME?0:t<CHARGE_START?(t<.675?1:2):null;}
 function makeBattle(a,b,random=Math.random,operation='add'){
@@ -25,6 +25,14 @@ function makeBattle(a,b,random=Math.random,operation='add'){
    u.centerTarget=CENTER-direction*((opposing?110:70)+column*(count>=50?24:32)+(row%2)*6);u.centerArrival=CHARGE_START+Math.abs(u.centerTarget-u.startX)/SPEED;u.lane=(row%3)*2+(column%2);
   }
   battle.costumeStart=Math.max(...units.filter(u=>u.index<3).map(u=>u.centerArrival))+.12;
+  if(battle.conversion){
+   // Hold both groups behind a clear casting space. The wizard is not a counted unit.
+   for(const u of units){const direction=u.side==='left'?1:-1,column=u.index%12,row=Math.floor(u.index/12);
+    u.startX=u.centerTarget=CENTER-direction*(340+column*36+(row%2)*12);
+    u.centerArrival=CHARGE_START;u.lane=(row%3)*2+(column%2);
+   }
+   battle.costumeStart=CHARGE_START+.12;
+  }
   battle.release=battle.costumeStart+(battle.conversion?COSTUME_TIME:TURN_TIME);
   battle.fireRunStart=battle.waterRunStart=battle.release;
   for(const u of units){u.stopTime=Math.min(u.centerArrival,battle.costumeStart);u.targetX=u.startX+(u.side==='left'?1:-1)*SPEED*(u.stopTime-CHARGE_START);}

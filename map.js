@@ -1,8 +1,8 @@
 /* Exact integer geometry; continuous travel and independent per-point arrivals. */
 (function(root){'use strict';
-const UNIT=48,ZERO=887,LIMIT=198,RAMP=.15;
+const UNIT=18,ZERO=887,LIMIT=198,RAMP=.15;
 const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
-function position(n){if(!Number.isFinite(n)||Math.abs(n)>LIMIT)throw new RangeError('Map coordinate outside ±198');return {x:ZERO+n*UNIT,y:535+30*Math.sin(n/13)+18*Math.sin(n/31)};}
+function position(n){if(!Number.isFinite(n)||Math.abs(n)>LIMIT)throw new RangeError('Map coordinate outside ±198');return {x:ZERO+n*UNIT,y:530+5*Math.sin(n/32)};}
 function baseMarker(n){return Number.isInteger(n)&&Math.abs(n)<=LIMIT&&(Math.abs(n)%5===0||Math.abs(n)===LIMIT);}
 function distanceFraction(q){q=clamp(q,0,1);return q<RAMP?q*q/(2*RAMP*(1-RAMP)):q>1-RAMP?1-(1-q)*(1-q)/(2*RAMP*(1-RAMP)):(q-RAMP/2)/(1-RAMP);}
 function inverseFraction(r){r=clamp(r,0,1);const edge=RAMP/(2*(1-RAMP));return r<edge?Math.sqrt(r*2*RAMP*(1-RAMP)):r>1-edge?1-Math.sqrt((1-r)*2*RAMP*(1-RAMP)):r*(1-RAMP)+RAMP/2;}

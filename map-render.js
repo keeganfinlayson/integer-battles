@@ -24,52 +24,39 @@ function medallion(g,x,y,sign,state,t,j,contact=0){
  const shine=(Math.sin(t*4+j.phase)+1)/2;g.strokeStyle='rgba(255,250,215,'+(.2+shine*.35)+')';g.lineWidth=2.5;g.beginPath();g.arc(0,0,40,-2.8+shine*.3,-2.1+shine*.3);g.stroke();
  g.restore();
 }
-function scenery(g,art,sign,camera,s,t){
- g.fillStyle='#e8c48b';g.fillRect(0,0,W,H);
- const overlap=180,marginBlend=80,profile=sign<0?{zero:2.887,end:.1/.79,firstBand:.79}:{zero:.267,end:2.760,firstBand:1};
- const panel=(M.LIMIT*M.UNIT+2*overlap)/Math.abs(profile.end-profile.zero),stride=panel-overlap;
- const offset=M.ZERO-profile.zero*panel+Math.floor(profile.zero)*overlap,sourceH=art.height/3;
- // Prepare soft alpha overlaps once; avoid per-frame strip seams and oversized textures.
- let tiles=cache.get(art);
- if(!tiles){
-  tiles=[];
-  for(let i=0;i<3;i++){
-   const tile=document.createElement('canvas');tile.width=art.width;tile.height=sourceH;const q=tile.getContext('2d');
-   q.drawImage(art,0,i*sourceH,art.width*(i===0?profile.firstBand:1),sourceH,0,0,art.width,sourceH);
-   q.globalCompositeOperation='destination-in';
-   if(i===0){
-    const fade=q.createLinearGradient(0,0,marginBlend*art.width/panel,0);fade.addColorStop(0,'rgba(255,255,255,0)');fade.addColorStop(1,'white');q.fillStyle=fade;q.fillRect(0,0,tile.width,sourceH);
-   }else{
-    // An organic terrain boundary with a narrow feather avoids straight panel cuts
-    // and the double mountains/trees caused by a broad translucent overlay.
-    const span=overlap*art.width/panel,feather=span*.1,mask=document.createElement('canvas');mask.width=tile.width;mask.height=tile.height;const m=mask.getContext('2d');
-    for(let y=0;y<tile.height;y++){
-     const edge=span*(.45+.15*Math.sin(y*.027+i)+.1*Math.sin(y*.071));
-     const fade=m.createLinearGradient(edge,0,edge+feather,0);fade.addColorStop(0,'rgba(255,255,255,0)');fade.addColorStop(1,'white');m.fillStyle=fade;m.fillRect(0,y,tile.width,1);
-    }
-    q.drawImage(mask,0,0);
-   }
-   if(i===2){const fade=q.createLinearGradient(art.width-marginBlend*art.width/panel,0,art.width,0);fade.addColorStop(0,'white');fade.addColorStop(1,'rgba(255,255,255,0)');q.fillStyle=fade;q.fillRect(0,0,tile.width,sourceH);}
-   q.globalCompositeOperation='source-over';tiles.push(tile);
-  }
-  cache.set(art,tiles);
- }
- // Terrain-only margins avoid repeating the castle or crossing landmarks.
- const margin=1000,sourceMargin=art.width*(margin+marginBlend)/panel,leftEdge=offset-camera,rightEdge=offset+2*stride+panel-camera;
- if(leftEdge>-marginBlend)g.drawImage(art,art.width*.38,0,sourceMargin,sourceH,leftEdge-margin,0,margin+marginBlend,H);
- if(rightEdge<W+marginBlend)g.drawImage(art,art.width*.35,2*sourceH,sourceMargin,sourceH,rightEdge-marginBlend,0,margin+marginBlend,H);
- for(let i=0;i<3;i++){const x=offset+i*stride-camera;if(x>W||x+panel<0)continue;g.drawImage(tiles[i],x,0,panel,H);}
- // End destinations are withheld until their exact coordinate has been reached.
- const endX=M.position(sign*M.LIMIT).x-camera,arrival=s.progress>=M.LIMIT;
- if(!arrival){g.save();const a=sign>0?endX-650:endX+650,b=sign>0?endX-450:endX+450;const veil=g.createLinearGradient(a,0,b,0);veil.addColorStop(0,'rgba(232,196,139,0)');veil.addColorStop(1,'#e8c48b');g.fillStyle=veil;g.fillRect(sign>0?a:0,0,sign>0?W-a:a,H);g.restore();}
+// A single coordinate transform is shared by both elemental versions.
+// No panels, repeated scenery, result-dependent geography, or joins at zero.
+// Include half a viewport beyond each endpoint so no underlying battle scenery shows.
+const PANORAMA_SPAN=2*(M.LIMIT*M.UNIT+W/2+80);
+let revealLayer;
+function worldImage(g,art,camera){
+ const start=M.ZERO-PANORAMA_SPAN/2-camera;
+ g.drawImage(art,start,0,PANORAMA_SPAN,H);
 }
-function joinedScenery(g,world,camera,s,t){
- const zeroX=M.ZERO-camera;
- for(const [art,sign,left,right]of [[world.negative,-1,0,Math.min(W,zeroX)],[world.positive,1,Math.max(0,zeroX),W]]){
-  if(right<=left)continue;g.save();g.beginPath();g.rect(left,0,right-left,H);g.clip();scenery(g,art,sign,camera,s,t);g.restore();
- }
- // One shared waterfall crossing joins the banks in world coordinates, independent of result sign.
- if(world.crossing&&zeroX>-W/2&&zeroX<W*1.5){let tile=crossingCache.get(world.crossing);if(!tile){tile=document.createElement('canvas');tile.width=world.crossing.width;tile.height=world.crossing.height;const q=tile.getContext('2d');q.drawImage(world.crossing,0,0);q.globalCompositeOperation='destination-in';const mask=document.createElement('canvas');mask.width=tile.width;mask.height=tile.height;const m=mask.getContext('2d');for(let y=0;y<tile.height;y++){const left=tile.width*(.06+.02*Math.sin(y*.008)+.012*Math.sin(y*.021)),right=tile.width*(.94+.02*Math.sin(y*.009+1)+.012*Math.sin(y*.017)),feather=20,fade=m.createLinearGradient(left,0,right,0);fade.addColorStop(0,'rgba(255,255,255,0)');fade.addColorStop(feather/(right-left),'white');fade.addColorStop(1-feather/(right-left),'white');fade.addColorStop(1,'rgba(255,255,255,0)');m.fillStyle=fade;m.fillRect(0,y,tile.width,1);}q.drawImage(mask,0,0);crossingCache.set(world.crossing,tile);}g.drawImage(tile,zeroX-tile.width/2,0,tile.width,H);}
+function revealBounds(j,s){
+ const start=M.ZERO,end=M.position(s.n).x;
+ return {left:Math.min(start,end),right:Math.max(start,end)};
+}
+function continuousScenery(g,world,camera,s,j){
+ // Both elemental appearances are present in the unoccupied world, with no realm split.
+ worldImage(g,world.water,camera);g.save();g.globalAlpha=.46;worldImage(g,world.fire,camera);g.restore();
+ if(!j.direction||s.progress<=0)return;
+ if(!revealLayer){revealLayer=document.createElement('canvas');revealLayer.width=W;revealLayer.height=H;}
+ const q=revealLayer.getContext('2d');q.clearRect(0,0,W,H);
+ worldImage(q,j.direction<0?world.fire:world.water,camera);
+ const bounds=revealBounds(j,s),a=bounds.left-camera,b=bounds.right-camera;
+ // Feather inward only: the elemental region never extends beyond the actual result.
+ const feather=Math.min(34,(b-a)/2),mask=q.createLinearGradient(a,0,b,0);
+ mask.addColorStop(0,'rgba(255,255,255,0)');
+ mask.addColorStop(feather/(b-a),'white');
+ mask.addColorStop(1-feather/(b-a),'white');
+ mask.addColorStop(1,'rgba(255,255,255,0)');
+ q.globalCompositeOperation='destination-in';q.fillStyle=mask;q.fillRect(0,0,W,H);
+ q.globalCompositeOperation='source-over';
+ // Gradient clamps at its outer colors; explicitly trim to the traveled interval.
+ if(a>0)q.clearRect(0,0,Math.min(W,a),H);
+ if(b<W)q.clearRect(Math.max(0,b),0,W-Math.max(0,b),H);
+ g.drawImage(revealLayer,0,0);
 }
 function route(g,camera,sign,s,t,j,bridge){
  const lo=Math.max(-198,Math.floor((camera-M.ZERO)/M.UNIT)-2),hi=Math.min(198,Math.ceil((camera+W-M.ZERO)/M.UNIT)+2);
@@ -86,7 +73,7 @@ function route(g,camera,sign,s,t,j,bridge){
  const linePosition=n=>{const p=M.position(n);return {x:p.x,y:p.y-12};};
  const color=sign<0?'#d84a1b':sign===0?'#95886d':'#119fd0';
  for(let n=lo;n<=hi;n++){
-  const p=linePosition(n),x=p.x-camera,occupied=n!==0&&Math.sign(n)===sign&&Math.abs(n)<=s.occupied,base=M.baseMarker(n);
+  const p=linePosition(n),x=p.x-camera,occupied=n!==0&&Math.sign(n)===sign&&Math.abs(n)<=s.occupied,base=M.baseMarker(n)&&!(s.state==='arrival'&&n!==j.result&&Math.abs(n-j.result)<4);
   if(!base&&!occupied)continue;
   g.fillStyle=n===0?color:occupied?color:'#edd396';g.strokeStyle=occupied||n===0?'#39382c':'#715123';g.lineWidth=n===0?3:2;g.beginPath();g.arc(x,p.y,n===0?17:occupied?8.5*M.pointScale(j,n,t):6.5,0,Math.PI*2);g.fill();g.stroke();
   if(occupied&&M.pointScale(j,n,t)>.6){g.fillStyle='#fff9d9';g.globalAlpha=.65;g.beginPath();g.arc(x-2,p.y-2,2,0,Math.PI*2);g.fill();g.globalAlpha=1;}
@@ -110,22 +97,22 @@ function location(g,x,y,name){
  g.strokeText(main,x,y);g.fillText(main,x,y);g.restore();
 }
 function draw(g,j,t,art,bridge,world=root.IntegerMapWorld){
- const s=M.sample(j,t),sign=j.direction,camera=s.cameraX;g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';g.clearRect(0,0,W,H);if(world)joinedScenery(g,world,camera,s,t);else scenery(g,art,sign||1,camera,s,t);
- route(g,camera,sign,s,t,j,bridge);
- const places=sign<0?[
-  [-45,'The Lowlands',455,-80,-30],[-100,'The Absolute Oasis',455,-125,-80],[-170,'The Lower Lands',455,-198,-125],[-170,'Odds & Ends Hollow',680,-198,-125]
- ]:[
-  [8,'The Negative Marshes',680,0,24],[55,'The Absolute Wilds',455,20,82],[55,'Evenfall',680,30,82],[105,'Sumwhere',455,82,133],[157,'The Higher Ground',680,133,198]
+ const s=M.sample(j,t),sign=j.direction,camera=s.cameraX;g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';g.clearRect(0,0,W,H);
+ if(world&&world.water&&world.fire)continuousScenery(g,world,camera,s,j);
+ else if(art)worldImage(g,art,camera);
+ route(g,camera,sign,s,t,j,null);
+ const places=[
+ [-190,'The Fire Fortress',350],[-155,'The Lower Lands',720],[-135,'Odds & Ends Hollow',350],[-77,'The Absolute Oasis',350],[-42,'The Lowlands',720],
+ [-17,'The Opposite Shore',350],[17,'The Opposite Shore',350],[38,'The Negative Marshes',720],[62,'The Absolute Wilds',350],[82,'Evenfall',720],
+ [112,'Sumwhere',350],[157,'The Higher Ground',720],[190,'Positive Palace',350]
  ];
- places.push([-12,'The Opposite Shore',455,-24,-1],[12,'The Opposite Shore',455,1,24]);
- // Place names pan with their landscape positions rather than sticking to the camera.
- for(const [n,name,y]of places){const x=M.position(n).x-camera;if(x>-300&&x<W+300)location(g,x,y,name);}
- if(s.progress>=198)location(g,M.position(j.result).x-camera,455,sign<0?'The Fire Fortress':'Positive Palace',s.done);
- const crossingX=M.ZERO-camera;if(crossingX>-250&&crossingX<W+250)location(g,crossingX,445,"Zero’s Crossing",s.done);
+ // Every name is anchored to the same world location in both elemental versions.
+ for(const [n,name,y]of places){const x=M.position(n).x-camera;if(x>-220&&x<W+220)location(g,x,y,name);}
+ const crossingX=M.ZERO-camera;if(crossingX>-250&&crossingX<W+250)location(g,crossingX,680,"Zero’s Crossing");
  if(s.state==='idle'&&j.variant===2){for(const p of j.particles){const age=t-p.delay;if(age<0||age>p.life)continue;g.globalAlpha=.35*Math.sin(age/p.life*Math.PI);g.fillStyle='#fff5cf';g.beginPath();g.arc(M.ZERO+p.x,495+p.y-age*8,1.5,0,Math.PI*2);g.fill();}g.globalAlpha=1;}
  if(sign!==0&&!s.done)medallion(g,s.x-camera,s.y-s.hop,sign,s.state,t,j,s.contact);
  // Thin book-map trim is a viewport overlay, never a stitched panel border.
  g.strokeStyle='#5e361c';g.lineWidth=9;g.strokeRect(4.5,4.5,W-9,H-9);g.strokeStyle='#c89348';g.lineWidth=2;g.strokeRect(12,12,W-24,H-24);
 }
-root.drawIntegerMap=draw;root.drawIntegerMedallion=medallion;
+root.integerMapRevealBounds=revealBounds;root.drawIntegerMap=draw;root.drawIntegerMedallion=medallion;
 })(window);
