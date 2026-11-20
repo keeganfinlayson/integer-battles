@@ -107,8 +107,8 @@ function draw(g,j,t,art,bridge,world=root.IntegerMapWorld){
  [112,'Sumwhere',350],[157,'The Higher Ground',720],[190,'Positive Palace',350]
  ];
  // Every name is anchored to the same world location in both elemental versions.
- for(const [n,name,y]of places){const x=M.position(n).x-camera;if(x>-220&&x<W+220)location(g,x,y,name);}
- const crossingX=M.ZERO-camera;if(crossingX>-250&&crossingX<W+250)location(g,crossingX,680,"Zero’s Crossing");
+ for(const [n,name,y]of places){const x=M.position(n).x-camera,clearY=y>650?650:Math.abs(x-W/2)<220?430:y;if(x>-220&&x<W+220)location(g,x,clearY,name);}
+ const crossingX=M.ZERO-camera;if(crossingX>-250&&crossingX<W+250)location(g,crossingX,650,"Zero’s Crossing");
  if(s.state==='idle'&&j.variant===2){for(const p of j.particles){const age=t-p.delay;if(age<0||age>p.life)continue;g.globalAlpha=.35*Math.sin(age/p.life*Math.PI);g.fillStyle='#fff5cf';g.beginPath();g.arc(M.ZERO+p.x,495+p.y-age*8,1.5,0,Math.PI*2);g.fill();}g.globalAlpha=1;}
  if(sign!==0&&!s.done)medallion(g,s.x-camera,s.y-s.hop,sign,s.state,t,j,s.contact);
  // Thin book-map trim is a viewport overlay, never a stitched panel border.
