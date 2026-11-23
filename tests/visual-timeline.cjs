@@ -27,13 +27,31 @@ for(const operation of ['add','subtract'])for(const [a,b]of cases){
 for(let result=-198;result<=198;result++){
  const journey=map.makeJourney(result,()=>.5),end=map.sample(journey,journey.end);
  assert.equal(end.n,result);assert.equal(end.occupied,Math.abs(result));assert(end.done);
- assert.equal(end.x,map.ZERO+result*map.UNIT);
+ assert.equal(end.x,map.position(result).x);
  for(const fraction of [0,.1,.5,.9,1]){
   const state=map.sample(journey,journey.entry+journey.duration*fraction);
   const bounds=scope.integerMapRevealBounds(journey,state);
   assert.equal(bounds.left,Math.min(map.ZERO,state.x));
   assert.equal(bounds.right,Math.max(map.ZERO,state.x));
-  assert(bounds.right-bounds.left<=Math.abs(result)*map.UNIT+1e-6);
+  assert(bounds.right-bounds.left<=map.distance(result)+1e-6);
+ }
+}
+let previousGap=Infinity;
+for(let n=0;n<map.LIMIT;n++){
+ const gap=map.position(n+1).x-map.position(n).x;
+ assert(gap>0&&gap<previousGap);previousGap=gap;
+ assert(Math.abs(map.integerAtX(map.position(n+.5).x)-(n+.5))<1e-9);
+ assert(Math.abs(map.position(-n).x+map.position(n).x-2*map.ZERO)<1e-9);
+}
+assert(map.position(1).x-map.ZERO>50);
+assert.equal(map.position(map.LIMIT).x,map.ZERO+map.LIMIT*map.UNIT);
+// The emblem passes each point at precisely that point's independent bloop time.
+for(const result of [-198,-23,23,198]){
+ const j=map.makeJourney(result,()=>.5);
+ for(let n=1;n<=Math.abs(result);n++){
+  const s=map.sample(j,map.pointTime(j,n));
+  assert(Math.abs(s.n-Math.sign(result)*n)<1e-8);
+  assert.equal(s.occupied,n);
  }
 }
 console.log(`${sequences} battle cases and 397 map destinations passed, including held groups, drained exits, and exact reveal boundaries.`);

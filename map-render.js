@@ -59,7 +59,7 @@ function continuousScenery(g,world,camera,s,j){
  g.drawImage(revealLayer,0,0);
 }
 function route(g,camera,sign,s,t,j,bridge){
- const lo=Math.max(-198,Math.floor((camera-M.ZERO)/M.UNIT)-2),hi=Math.min(198,Math.ceil((camera+W-M.ZERO)/M.UNIT)+2);
+ const lo=Math.max(-198,Math.floor(M.integerAtX(camera))-2),hi=Math.min(198,Math.ceil(M.integerAtX(camera+W))+2);
  const path=(dy=0)=>{g.beginPath();for(let n=lo;n<=hi;n+=.25){const p=M.position(n);if(n===lo)g.moveTo(p.x-camera,p.y+dy);else g.lineTo(p.x-camera,p.y+dy);}};
  // Matte ochre road with broken brush edges; geometry still follows exact integer positions.
  g.lineCap='round';g.lineJoin='round';g.strokeStyle='#9c784b88';g.lineWidth=70;path();g.stroke();
@@ -75,9 +75,10 @@ function route(g,camera,sign,s,t,j,bridge){
  for(let n=lo;n<=hi;n++){
   const p=linePosition(n),x=p.x-camera,occupied=n!==0&&Math.sign(n)===sign&&Math.abs(n)<=s.occupied,base=M.baseMarker(n)&&!(s.state==='arrival'&&n!==j.result&&Math.abs(n-j.result)<4);
   if(!base&&!occupied)continue;
-  g.fillStyle=n===0?color:occupied?color:'#edd396';g.strokeStyle=occupied||n===0?'#39382c':'#715123';g.lineWidth=n===0?3:2;g.beginPath();g.arc(x,p.y,n===0?17:occupied?8.5*M.pointScale(j,n,t):6.5,0,Math.PI*2);g.fill();g.stroke();
+  const neighbor=n<198?n+1:n-1,gap=Math.abs(M.position(neighbor).x-M.position(n).x),radius=n===0?17:occupied?Math.min(8.5,gap*.34)*M.pointScale(j,n,t):Math.min(6.5,gap*.34);
+  g.fillStyle=n===0?color:occupied?color:'#edd396';g.strokeStyle=occupied||n===0?'#39382c':'#715123';g.lineWidth=n===0?3:2;g.beginPath();g.arc(x,p.y,radius,0,Math.PI*2);g.fill();g.stroke();
   if(occupied&&M.pointScale(j,n,t)>.6){g.fillStyle='#fff9d9';g.globalAlpha=.65;g.beginPath();g.arc(x-2,p.y-2,2,0,Math.PI*2);g.fill();g.globalAlpha=1;}
-  if(base){if(Math.abs(n)<=1){g.fillStyle='#f9e3b8';g.strokeStyle='#7d582b';g.lineWidth=1.5;g.beginPath();g.roundRect(x-22,p.y+(n===0?17:11),44,n===0?38:36,4);g.fill();g.stroke();}g.fillStyle='#33230f';g.font='bold '+(n===0?34:30)+'px Georgia';g.textAlign='center';g.textBaseline='middle';g.fillText(signed(n),x,p.y+(n===0?35:25));}
+  if(base){if(Math.abs(n)<=1){g.fillStyle='#f9e3b8';g.strokeStyle='#7d582b';g.lineWidth=1.5;g.beginPath();g.roundRect(x-22,p.y+(n===0?17:11),44,n===0?38:36,4);g.fill();g.stroke();}g.fillStyle='#33230f';g.font='bold '+(n===0?34:Math.abs(n)>50?26:30)+'px Georgia';g.textAlign='center';g.textBaseline='middle';g.fillText(signed(n),x,p.y+(n===0?35:25));}
  }
  // Keep the current intermediate integer explicit beyond the five-unit labels.
  if(s.state==='arrival'&&s.occupied>20&&s.occupied%5!==0&&s.occupied!==M.LIMIT){const n=sign*s.occupied,p=linePosition(n);g.fillStyle='#33230f';g.font='bold 30px Georgia';g.textAlign='center';g.textBaseline='middle';g.fillText(signed(n),p.x-camera,p.y+25);}
@@ -107,12 +108,13 @@ function draw(g,j,t,art,bridge,world=root.IntegerMapWorld){
  [112,'Sumwhere',350],[157,'The Higher Ground',720],[190,'Positive Palace',350]
  ];
  // Every name is anchored to the same world location in both elemental versions.
- for(const [n,name,y]of places){const x=M.position(n).x-camera,clearY=y>650?650:Math.abs(x-W/2)<220?430:y;if(x>-220&&x<W+220)location(g,x,clearY,name);}
+ for(const [n,name,y]of places){const x=M.ZERO+n*M.UNIT-camera,clearY=y>650?650:Math.abs(x-W/2)<220?430:y;if(x>-220&&x<W+220)location(g,x,clearY,name);}
  const crossingX=M.ZERO-camera;if(crossingX>-250&&crossingX<W+250)location(g,crossingX,650,"Zero’s Crossing");
  if(s.state==='idle'&&j.variant===2){for(const p of j.particles){const age=t-p.delay;if(age<0||age>p.life)continue;g.globalAlpha=.35*Math.sin(age/p.life*Math.PI);g.fillStyle='#fff5cf';g.beginPath();g.arc(M.ZERO+p.x,495+p.y-age*8,1.5,0,Math.PI*2);g.fill();}g.globalAlpha=1;}
  if(sign!==0&&!s.done)medallion(g,s.x-camera,s.y-s.hop,sign,s.state,t,j,s.contact);
  // Thin book-map trim is a viewport overlay, never a stitched panel border.
  g.strokeStyle='#5e361c';g.lineWidth=9;g.strokeRect(4.5,4.5,W-9,H-9);g.strokeStyle='#c89348';g.lineWidth=2;g.strokeRect(12,12,W-24,H-24);
+ g.save();g.font='18px Georgia';g.textAlign='left';g.fillStyle='#473d31';g.fillText('Map spacing: wider near 0',28,43);g.restore();
 }
 root.integerMapRevealBounds=revealBounds;root.drawIntegerMap=draw;root.drawIntegerMedallion=medallion;
 })(window);
