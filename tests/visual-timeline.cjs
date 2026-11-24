@@ -43,7 +43,16 @@ for(let n=0;n<map.LIMIT;n++){
  assert(Math.abs(map.integerAtX(map.position(n+.5).x)-(n+.5))<1e-9);
  assert(Math.abs(map.position(-n).x+map.position(n).x-2*map.ZERO)<1e-9);
 }
-assert(map.position(1).x-map.ZERO>50);
+assert(map.position(1).x-map.ZERO>175);
+for(const result of [-2,-1,1,2]){
+ const j=map.makeJourney(result,()=>.5),end=map.sample(j,j.end);
+ assert.equal(end.cameraX,0);assert(Math.abs(end.x-end.cameraX-map.ZERO)>175);
+ assert(j.duration>1.3);
+}
+for(let n=-198;n<=198;n++){
+ const p=map.position(n),screenX=p.x-map.cameraOffset(p.x);
+ assert(screenX>=map.ZERO-480-1e-8&&screenX<=map.ZERO+480+1e-8);
+}
 assert.equal(map.position(map.LIMIT).x,map.ZERO+map.LIMIT*map.UNIT);
 // The emblem passes each point at precisely that point's independent bloop time.
 for(const result of [-198,-23,23,198]){

@@ -73,7 +73,7 @@ function route(g,camera,sign,s,t,j,bridge){
  const linePosition=n=>{const p=M.position(n);return {x:p.x,y:p.y-12};};
  const color=sign<0?'#d84a1b':sign===0?'#95886d':'#119fd0';
  for(let n=lo;n<=hi;n++){
-  const p=linePosition(n),x=p.x-camera,occupied=n!==0&&Math.sign(n)===sign&&Math.abs(n)<=s.occupied,base=M.baseMarker(n)&&!(s.state==='arrival'&&n!==j.result&&Math.abs(n-j.result)<4);
+  const p=linePosition(n),x=p.x-camera,occupied=n!==0&&Math.sign(n)===sign&&Math.abs(n)<=s.occupied,base=M.baseMarker(n)&&!(s.state==='arrival'&&n!==0&&n!==j.result&&Math.abs(n-j.result)<4);
   if(!base&&!occupied)continue;
   const neighbor=n<198?n+1:n-1,gap=Math.abs(M.position(neighbor).x-M.position(n).x),radius=n===0?17:occupied?Math.min(8.5,gap*.34)*M.pointScale(j,n,t):Math.min(6.5,gap*.34);
   g.fillStyle=n===0?color:occupied?color:'#edd396';g.strokeStyle=occupied||n===0?'#39382c':'#715123';g.lineWidth=n===0?3:2;g.beginPath();g.arc(x,p.y,radius,0,Math.PI*2);g.fill();g.stroke();
@@ -81,7 +81,7 @@ function route(g,camera,sign,s,t,j,bridge){
   if(base){if(Math.abs(n)<=1){g.fillStyle='#f9e3b8';g.strokeStyle='#7d582b';g.lineWidth=1.5;g.beginPath();g.roundRect(x-22,p.y+(n===0?17:11),44,n===0?38:36,4);g.fill();g.stroke();}g.fillStyle='#33230f';g.font='bold '+(n===0?34:Math.abs(n)>50?26:30)+'px Georgia';g.textAlign='center';g.textBaseline='middle';g.fillText(signed(n),x,p.y+(n===0?35:25));}
  }
  // Keep the current intermediate integer explicit beyond the five-unit labels.
- if(s.state==='arrival'&&s.occupied>20&&s.occupied%5!==0&&s.occupied!==M.LIMIT){const n=sign*s.occupied,p=linePosition(n);g.fillStyle='#33230f';g.font='bold 30px Georgia';g.textAlign='center';g.textBaseline='middle';g.fillText(signed(n),p.x-camera,p.y+25);}
+ if(s.state==='arrival'&&s.occupied>0&&s.occupied%5!==0&&s.occupied!==M.LIMIT){const n=sign*s.occupied,p=linePosition(n);g.fillStyle='#33230f';g.font='bold 30px Georgia';g.textAlign='center';g.textBaseline='middle';g.fillText(signed(n),p.x-camera,p.y+25);}
  // One contact ring on the exact occupied integer, with a short fade.
  if(s.contact>0&&s.occupied){const point=linePosition(sign*s.occupied);g.strokeStyle=sign<0?'rgba(185,60,17,'+(s.contact*.55)+')':'rgba(0,126,185,'+(s.contact*.55)+')';g.lineWidth=2;g.beginPath();g.arc(point.x-camera,point.y,10+(1-s.contact)*7,0,Math.PI*2);g.stroke();}
  if(s.state==='idle'||s.state==='zero'){
